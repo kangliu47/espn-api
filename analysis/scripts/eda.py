@@ -13,8 +13,6 @@ stats_2021 = pd.read_csv(
 ).dropna()
 stats_2020 = pd.read_csv(os.path.join(project_root, "data", "stats_2020.csv")).dropna()
 
-# %%
-
 info_cols = [
     "name",
     "position",
@@ -41,20 +39,6 @@ percentages = [
     "FT%",
 ]
 
-# %%
-
-data = stats_2020
-
-n_teams = 14
-n_players = 13
-
-data_top = data.head(n_teams * n_players).set_index("name").fillna(0)
-
-mean_stats_counts = data_top[stats_counts].mean()
-std_stats_counts = data_top[stats_counts].std()
-
-# %%
-
 
 def transform_column(one_stats: pd.Series) -> pd.Series:
     mean = one_stats.mean()
@@ -71,48 +55,92 @@ def transform_stats(count_type_stats: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(all_data, index=count_type_stats.index)
 
 
-normalized_data = transform_stats(data_top[stats_counts])
+def get_percentage_rating(
+    n_made: pd.Series, n_attempts: pd.Series, baseline: float
+) -> pd.Series:
+    result = n_attempts.copy()
+    non_zero_attempts = n_attempts > 0
+    result.loc[non_zero_attempts] = n_attempts.loc[non_zero_attempts] * (
+        n_made.loc[non_zero_attempts] / n_attempts.loc[non_zero_attempts] - baseline
+    )
+    return result
 
-# %%
-normalized_data["overall"] = normalized_data.sum(axis=1)
-normalized_data.sort_values(by="overall", ascending=False).head(50)
-# %%
 
-from sklearn.decomposition import PCA
+#%%
 
-pca = PCA(n_components=3)
+data = stats_2021
 
-pca_results = pca.fit_transform(normalized_data[stats_counts])
+n_teams = 14
+n_players = 13
+players_pool = n_teams * n_players
+players_pool = 400
+data_top = data.head(players_pool).set_index("name").fillna(0)
+mean_stats_counts = data_top[stats_counts].mean()
+std_stats_counts = data_top[stats_counts].std()
 
-pca_dataframe = pd.DataFrame(
-    data=pca_results, columns=["first", "second", "third"], index=normalized_data.index,
+# * calculate the shooting percentage
+mean_shooting_counts = data_top[shooting_counts].mean()
+field_goal_baseline = mean_shooting_counts["FGM"] / mean_shooting_counts["FGA"]
+free_throw_baseline = mean_shooting_counts["FTM"] / mean_shooting_counts["FTA"]
+
+
+data_top["FGR"] = get_percentage_rating(
+    n_made=data_top["FGM"], n_attempts=data_top["FGA"], baseline=field_goal_baseline
+)
+data_top["FTR"] = get_percentage_rating(
+    n_made=data_top["FTM"], n_attempts=data_top["FTA"], baseline=free_throw_baseline
 )
 
+normalized_data = transform_stats(data_top[stats_counts + ["FGR", "FTR"]])
+normalized_data["overall"] = normalized_data.sum(axis=1)
+normalized_data.sort_values(by="overall", ascending=False).head(50)
+
+# * 1 - autocomplete input
+# * 2 - percentage baseline slider
+# * 3 - player pool size slider
+# * 4 - stats dropdown (2020 or 2021)
+# * 5 - category for color dropdown (PTS, STL etc)
+# * 6 - add player name label
+# * 7 - dataframe with selection
+
 # %%
+
 import hvplot.pandas
 import holoviews as hv
 from holoviews import opts
+from holoviews import dim
 
 hv.extension("bokeh")
 
-pca_dataframe["name"] = pca_dataframe.index
-pca_dataframe.hvplot.scatter(
-    x="first", y="second", hover_cols=["name", "first", "second"],
+punt_cat = "PTS"
+punt_col = f"PUNT_{punt_cat}"
+normalized_data[punt_col] = normalized_data["overall"] - normalized_data[punt_cat]
+
+scatter = (
+    normalized_data.reset_index()
+    .hvplot.scatter(
+        x="FGR",
+        y="FTR",
+        c=punt_col,
+        hover_cols=["name", "overall", "pro_team", punt_col],
+    )
+    .opts(
+        width=800,
+        height=800,
+        size=abs(dim(punt_col)) * 2,
+        title=f"total players {players_pool}",
+    )
+)
+scatter
+
+
+#%%
+
+hv.save(
+    scatter, os.path.join(project_root, "data", f"{punt_col}_scatter_2021.html"),
 )
 
 # %%
-pca_components = pd.DataFrame(
-    data=pca.components_, columns=stats_counts, index=["first", "second", "third"]
-)
-pca_components
-# %%
-hvplot.scatter_matrix(normalized_data[stats_counts])
-
-# %%
-
-hvplot.scatter_matrix(stats_2020[stats_counts + ["position"]], c="position")
-# %%
-
 
 hist_plots = {}
 for col in stats_counts:
