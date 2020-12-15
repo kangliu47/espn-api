@@ -6,17 +6,10 @@ script_path = os.path.dirname(__file__)
 project_root = os.path.abspath(os.path.join(script_path, "../.."))
 sys.path.append(project_root)
 
-import json
 import pandas as pd
 from espn_api.basketball.league import League
 from espn_api.basketball.player import Player
-
-
-def load_cookies() -> dict:
-    cookies_path = os.path.join(project_root, "data", "espn_keys.json")
-    with open(cookies_path, "r") as file_obj:
-        cookies = json.load(file_obj)
-    return cookies
+from analysis.utils.helpers import load_cookies, league_id
 
 
 def get_one_stats(one_player: Player, stats_season: str, stats_type: str) -> dict:
@@ -57,10 +50,7 @@ def get_all_stats(
 
 
 # %%
-
-
-league_id = 189331
-cookies = load_cookies()
+cookies = load_cookies(project_root=project_root)
 my_league = League(
     league_id=league_id, year=2021, espn_s2=cookies["espn_s2"], swid=cookies["swid"]
 )
@@ -68,10 +58,11 @@ free_agents = my_league.free_agents(size=1100)
 
 data_dir = os.path.join(project_root, "data")
 stats_2020 = get_all_stats(free_agents, stats_season="2020_stats", stats_type="avg")
-stats_2020.to_csv(os.path.join(data_dir, "stats_2020.csv"), index=False)
 projected_2021 = get_all_stats(
     free_agents, stats_season="2021_projected", stats_type="avg"
 )
-projected_2021.to_csv(os.path.join(data_dir, "projected_2021.csv"), index=False)
 
-# %%
+#%%
+# stats_2020.to_csv(os.path.join(data_dir, "stats_2020.csv"), index=False)
+# projected_2021.to_csv(os.path.join(data_dir, "projected_2021.csv"), index=False)
+
