@@ -76,8 +76,8 @@ def get_players_pool(
     return players_pool
 
 
-data = stats_2021
-players_pool = get_players_pool(n_teams=13, n_players=13)
+data = stats_2020
+players_pool = get_players_pool(n_teams=13, n_players=13, over_write=400)
 player_ratings = get_player_ratings(data, players_pool=players_pool)
 
 # %%
@@ -100,33 +100,48 @@ def plot_stats_distribution(data: pd.DataFrame, plot_cols: list) -> hv.Layout:
 
 #%%
 
-punt_cat = "PTS"
-punt_col = f"PUNT_{punt_cat}"
-player_ratings[punt_col] = player_ratings["overall"] - player_ratings[punt_cat]
 
-scatter = (
-    player_ratings.reset_index()
-    .hvplot.scatter(
-        x="FGR",
-        y="FTR",
-        c=punt_col,
-        hover_cols=["name", "overall", "pro_team", punt_col],
+def add_overall_punt_one_category(
+    player_ratings: pd.DataFrame, punt_cat: str = "PTS"
+) -> pd.DataFrame:
+    punt_col = punt_column_name(punt_cat)
+    player_ratings[punt_col] = player_ratings["overall"] - player_ratings[punt_cat]
+    return player_ratings
+
+
+def punt_column_name(punt_cat: str) -> str:
+    return f"PUNT_{punt_cat}"
+
+
+def plot_player_ratings_scatter(
+    player_ratings: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    color_col: str = "overall",
+    size_col: str = "overall",
+) -> hv.Scatter:
+    scatter = (
+        player_ratings.reset_index()
+        .hvplot.scatter(x=x_col, y=y_col, c=color_col, hover_cols=["name", "overall"],)
+        .opts(
+            size=abs(dim(size_col)) * 2,
+            title=f"total players {players_pool}",
+            **plot_opts,
+        )
     )
-    .opts(
-        width=800,
-        height=800,
-        size=abs(dim(punt_col)) * 2,
-        title=f"total players {players_pool}",
-    )
-)
-scatter
+    return scatter
 
 
 #%%
 
-hv.save(
-    scatter, os.path.join(project_root, "data", f"{punt_col}_scatter_2021.html"),
-)
+
+color_col = "overall"
+size_col = "overall"
+plot_opts = dict(width=800, height=800)
+x_col = "FGR"
+y_col = "FTR"
+
+plot_player_ratings_scatter(player_ratings, x_col="BLK", y_col="STL")
 
 # %%
 
