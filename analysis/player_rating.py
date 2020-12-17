@@ -83,10 +83,13 @@ def get_similar_players(
         "cosine": (cosine_similarity, False),
         "euclidean": (euclidean_distances, True),
     }
+    ratings = player_ratings.copy()
+    if "name" in player_ratings.columns:
+        ratings = ratings.set_index("name")
     score_function, sort_ascending = function_and_sorting[score_method]
-    one_player = player_ratings.loc[name, feature_cols].to_frame().T
-    all_scores = score_function(X=one_player, Y=player_ratings[feature_cols])
-    similar_players = player_ratings.copy()
+    one_player = ratings.loc[name, feature_cols].to_frame().T
+    all_scores = score_function(X=one_player, Y=ratings[feature_cols])
+    similar_players = ratings.copy()
     similar_players[score_method] = all_scores.reshape(-1, 1)
     return similar_players.sort_values(by=score_method, ascending=sort_ascending).head(
         n_players

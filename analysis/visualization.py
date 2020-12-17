@@ -32,3 +32,4 @@ def plot_player_ratings_scatter(
         scatter_base * hv.VLine(0).opts(color="gray") * hv.HLine(0).opts(color="gray")
     )
     return overlay
+
