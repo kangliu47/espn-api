@@ -14,5 +14,5 @@ dist
 env
 coverage*
 
-data
+data/data_local
 .ipynb_checkpoints
