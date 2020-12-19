@@ -1,0 +1,13 @@
+name: espn
+channels:
+  - defaults
+  - pyviz
+dependencies:
+  - python=3.8
+  - jupyter
+  - requests
+  - black
+  - pandas
+  - holoviz
+  - scikit-learn
+  - jupyter-panel-proxy
